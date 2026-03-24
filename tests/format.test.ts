@@ -24,6 +24,9 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+// createRequire lets us simulate CJS require() from this ESM test file.
+// Bare require() is not available in ESM under Node.js (only Bun polyfills it).
+import { createRequire } from "node:module";
 import { describe, test, expect } from "bun:test";
 import * as prettier from "prettier";
 import * as plugin from "../index.ts";
@@ -172,4 +175,55 @@ describe("formatter fixtures", () => {
       }
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// CJS entry point tests
+// ---------------------------------------------------------------------------
+
+/**
+ * Verify the built CJS entry point loads correctly and exports the expected shape.
+ *
+ * These tests run against `dist/index.cjs` (the tsup-compiled CJS output).
+ * They require `bun run build` to have been run first.
+ */
+describe("CJS entry point", () => {
+  const distCjsPath = path.join(import.meta.dir, "..", "dist", "index.cjs");
+  // createRequire produces a require() function scoped to this module's URL.
+  // This lets ESM test files load CJS modules portably (works in both Node.js and Bun).
+  const cjsRequire = createRequire(import.meta.url);
+
+  test("dist/index.cjs exists", () => {
+    expect(fs.existsSync(distCjsPath)).toBe(true);
+  });
+
+  test("CJS require() loads and exports expected shape", () => {
+    const cjsModule = cjsRequire(distCjsPath);
+
+    expect(cjsModule).toHaveProperty("languages");
+    expect(cjsModule).toHaveProperty("parsers");
+    expect(cjsModule).toHaveProperty("printers");
+    expect(cjsModule).toHaveProperty("setGrammarBinary");
+    expect(cjsModule).toHaveProperty("getGrammarBinary");
+
+    expect(cjsModule.languages).toHaveLength(1);
+    expect(cjsModule.languages[0].name).toBe("PDXScript");
+    expect(cjsModule.parsers).toHaveProperty("pdx-script-parse");
+    expect(cjsModule.printers).toHaveProperty("pdx-script-ast");
+    expect(typeof cjsModule.setGrammarBinary).toBe("function");
+    expect(typeof cjsModule.getGrammarBinary).toBe("function");
+  });
+
+  test("CJS module formats PDXScript correctly", async () => {
+    const cjsModule = cjsRequire(distCjsPath);
+    const prettierMod = cjsRequire("prettier");
+
+    const result = await prettierMod.format("my_decl={key=value}", {
+      parser: "pdx-script-parse",
+      plugins: [cjsModule],
+      useTabs: true,
+    });
+
+    expect(result).toBe("my_decl = {\n\tkey = value\n}\n");
+  });
 });

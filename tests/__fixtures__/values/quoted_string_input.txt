@@ -1,0 +1,3 @@
+decl = {
+key = "hello world"
+}

@@ -1,0 +1,3 @@
+my_decl = {
+	key = value
+}

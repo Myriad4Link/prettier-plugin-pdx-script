@@ -1,0 +1,7 @@
+# comment one
+# comment two
+decl = {
+	# comment three
+	key = value
+	# comment four
+}

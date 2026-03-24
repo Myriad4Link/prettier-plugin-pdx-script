@@ -1,0 +1,7 @@
+decl = {
+	level_one = {
+		level_two = {
+			level_three = val
+		}
+	}
+}

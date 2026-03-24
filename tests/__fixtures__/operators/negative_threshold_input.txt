@@ -1,0 +1,4 @@
+decl = {
+human_attitude > -1
+human_attitude < -5
+}

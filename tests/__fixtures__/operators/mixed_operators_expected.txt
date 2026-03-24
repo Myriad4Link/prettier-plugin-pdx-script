@@ -1,0 +1,5 @@
+decl = {
+	trigger_one = 5
+	trigger_two > 10
+	trigger_three < 20
+}

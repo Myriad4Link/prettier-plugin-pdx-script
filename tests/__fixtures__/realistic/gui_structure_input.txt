@@ -1,0 +1,10 @@
+guiTypes = {
+containerWindowType = {
+name = "my_container"
+visible = no
+position = {
+x = 0
+y = 0
+}
+}
+}

@@ -1,0 +1,5 @@
+decl = {
+	key = value!excl
+	path = some/path
+	compound = thing.thing2
+}

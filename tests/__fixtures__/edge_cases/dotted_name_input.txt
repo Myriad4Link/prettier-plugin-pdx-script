@@ -1,0 +1,3 @@
+my.mod.name = {
+key = value
+}

@@ -1,0 +1,3 @@
+decl = {
+	label = [MY_LOCALISATION_KEY]
+}

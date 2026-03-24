@@ -1,0 +1,4 @@
+decl = {
+	human_attitude > 6
+	num_factories < 10
+}

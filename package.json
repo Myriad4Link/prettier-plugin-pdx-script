@@ -1,0 +1,22 @@
+{
+  "name": "prettier-plugin-pdx-script",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "prettier": "^3.8.1",
+    "web-tree-sitter": "^0.26.7"
+  },
+  "files": [
+    "tree-sitter"
+  ]
+}

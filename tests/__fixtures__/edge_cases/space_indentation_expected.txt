@@ -1,0 +1,3 @@
+decl = {
+	key_with_spaces = value
+}

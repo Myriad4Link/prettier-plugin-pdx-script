@@ -1,0 +1,7 @@
+decl = {
+flat_key = flat_val
+nested = {
+inner_key = inner_val
+}
+another_flat = 42
+}

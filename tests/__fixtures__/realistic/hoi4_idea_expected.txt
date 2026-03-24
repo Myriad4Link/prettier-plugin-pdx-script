@@ -1,0 +1,15 @@
+ideas = {
+	country = {
+		my_idea = {
+			removal_cost = -1
+			picture = my_picture
+			modifier = {
+				political_power_gain = -0.05
+				consumer_goods_factor = -0.15
+			}
+			allowed = {
+				always = yes
+			}
+		}
+	}
+}

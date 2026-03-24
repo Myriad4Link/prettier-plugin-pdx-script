@@ -1,0 +1,4 @@
+decl = {
+	key_tab = val_a
+	key_space = val_b
+}

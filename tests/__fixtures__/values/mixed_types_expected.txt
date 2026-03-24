@@ -1,0 +1,8 @@
+decl = {
+	name = "quoted"
+	flag = yes
+	label = [MY_LOC]
+	nested = {
+		k = v
+	}
+}

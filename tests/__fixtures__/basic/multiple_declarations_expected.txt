@@ -1,0 +1,6 @@
+decl_one = {
+	key_a = value_a
+}
+decl_two = {
+	key_b = value_b
+}

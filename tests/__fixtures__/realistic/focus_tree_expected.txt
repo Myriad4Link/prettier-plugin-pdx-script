@@ -1,0 +1,16 @@
+focus_tree = {
+	id = my_focus_tree
+	country = {
+		factor = 0
+	}
+	focus = {
+		id = my_focus
+		icon = my_icon
+		x = 1
+		y = 1
+		cost = 10
+		completion_reward = {
+			add_political_power = 150
+		}
+	}
+}

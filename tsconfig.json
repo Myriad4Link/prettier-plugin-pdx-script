@@ -24,6 +24,6 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "include": ["index.ts", "printer.ts"],
+  "include": ["index.ts", "printer.ts", "tsup.config.ts"],
   "exclude": ["tests", "dist", "node_modules"]
 }

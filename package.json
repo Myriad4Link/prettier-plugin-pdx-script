@@ -3,7 +3,12 @@
   "version": "0.1.0-rc.1",
   "description": "Prettier plugin for formatting PDXScript (Paradox game script) files",
   "type": "module",
-  "exports": "./dist/index.js",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "exports": {
+    "import": "./dist/index.js",
+    "require": "./dist/index.cjs"
+  },
   "types": "./dist/index.d.ts",
   "files": [
     "dist"
@@ -27,7 +32,7 @@
     "url": "https://github.com/Myriad4Link/prettier-plugin-pdx-script/issues"
   },
   "scripts": {
-    "build": "tsc && bun -e \"import { cpSync, mkdirSync } from 'node:fs'; mkdirSync('dist/tree-sitter', { recursive: true }); cpSync('tree-sitter/tree-sitter-pdx_script.wasm', 'dist/tree-sitter/tree-sitter-pdx_script.wasm')\"",
+    "build": "tsup && bun -e \"import { cpSync, mkdirSync } from 'node:fs'; mkdirSync('dist/tree-sitter', { recursive: true }); cpSync('tree-sitter/tree-sitter-pdx_script.wasm', 'dist/tree-sitter/tree-sitter-pdx_script.wasm')\"",
     "prepublishOnly": "bun run build",
     "test": "bun test"
   },
@@ -37,6 +42,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "tsup": "^8.5.1",
     "typescript": "^5"
   }
 }

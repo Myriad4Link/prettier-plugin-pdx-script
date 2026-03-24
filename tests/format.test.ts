@@ -173,3 +173,51 @@ describe("formatter fixtures", () => {
     });
   }
 });
+
+// ---------------------------------------------------------------------------
+// CJS entry point tests
+// ---------------------------------------------------------------------------
+
+/**
+ * Verify the built CJS entry point loads correctly and exports the expected shape.
+ *
+ * These tests run against `dist/index.cjs` (the tsup-compiled CJS output).
+ * They require `bun run build` to have been run first.
+ */
+describe("CJS entry point", () => {
+  const distCjsPath = path.join(import.meta.dir, "..", "dist", "index.cjs");
+
+  test("dist/index.cjs exists", () => {
+    expect(fs.existsSync(distCjsPath)).toBe(true);
+  });
+
+  test("CJS require() loads and exports expected shape", () => {
+    const cjsModule = require(distCjsPath);
+
+    expect(cjsModule).toHaveProperty("languages");
+    expect(cjsModule).toHaveProperty("parsers");
+    expect(cjsModule).toHaveProperty("printers");
+    expect(cjsModule).toHaveProperty("setGrammarBinary");
+    expect(cjsModule).toHaveProperty("getGrammarBinary");
+
+    expect(cjsModule.languages).toHaveLength(1);
+    expect(cjsModule.languages[0].name).toBe("PDXScript");
+    expect(cjsModule.parsers).toHaveProperty("pdx-script-parse");
+    expect(cjsModule.printers).toHaveProperty("pdx-script-ast");
+    expect(typeof cjsModule.setGrammarBinary).toBe("function");
+    expect(typeof cjsModule.getGrammarBinary).toBe("function");
+  });
+
+  test("CJS module formats PDXScript correctly", async () => {
+    const cjsModule = require(distCjsPath);
+    const prettierMod = require("prettier");
+
+    const result = await prettierMod.format("my_decl={key=value}", {
+      parser: "pdx-script-parse",
+      plugins: [cjsModule],
+      useTabs: true,
+    });
+
+    expect(result).toBe("my_decl = {\n\tkey = value\n}\n");
+  });
+});

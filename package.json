@@ -1,22 +1,42 @@
 {
   "name": "prettier-plugin-pdx-script",
-  "module": "index.ts",
+  "version": "0.1.0-rc.1",
+  "description": "Prettier plugin for formatting PDXScript (Paradox game script) files",
   "type": "module",
-  "private": true,
+  "exports": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "prettier",
+    "prettier-plugin",
+    "pdxscript",
+    "paradox",
+    "hoi4",
+    "tree-sitter",
+    "formatter"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Myriad4Link/prettier-plugin-pdx-script.git"
+  },
+  "homepage": "https://github.com/Myriad4Link/prettier-plugin-pdx-script#readme",
+  "bugs": {
+    "url": "https://github.com/Myriad4Link/prettier-plugin-pdx-script/issues"
+  },
   "scripts": {
+    "build": "tsc && bun -e \"import { cpSync, mkdirSync } from 'node:fs'; mkdirSync('dist/tree-sitter', { recursive: true }); cpSync('tree-sitter/tree-sitter-pdx_script.wasm', 'dist/tree-sitter/tree-sitter-pdx_script.wasm')\"",
+    "prepublishOnly": "bun run build",
     "test": "bun test"
-  },
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
   },
   "dependencies": {
     "prettier": "^3.8.1",
     "web-tree-sitter": "^0.26.7"
   },
-  "files": [
-    "tree-sitter"
-  ]
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
+  }
 }

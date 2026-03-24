@@ -18,7 +18,11 @@
 
 import type { Parser, SupportLanguage } from "prettier";
 import * as path from "node:path";
-import { printers } from "./printer.ts";
+import { fileURLToPath } from "node:url";
+import { printers } from "./printer.js";
+
+/** Directory of the current module (ESM equivalent of __dirname). */
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ---------------------------------------------------------------------------
 // Language definition
@@ -82,7 +86,7 @@ function convertTree(node: any): any {
  * Prettier parsers for PDXScript.
  *
  * Contains a single parser `"pdx-script-parse"` that:
- * 1. Initializes the tree-sitter WASM runtime (lazy-loaded via `require`)
+ * 1. Initializes the tree-sitter WASM runtime (lazy-loaded via dynamic import)
  * 2. Loads the compiled PDXScript grammar from the WASM file
  * 3. Parses the input text into a tree-sitter AST
  * 4. Converts the tree-sitter AST to plain objects (see `convertTree`)
@@ -100,10 +104,9 @@ export const parsers: Record<string, Parser> = {
      * @returns A plain-object representation of the parse tree root node
      */
     parse: async (text) => {
-      // Import web-tree-sitter. Note: require() returns the module namespace
-      // object {Parser, Language, Tree, ...}, not the Parser class directly.
-      // We use `TreeSitter` as the namespace variable name.
-      const TreeSitter = require("web-tree-sitter");
+      // Dynamic import web-tree-sitter. In ESM, require() is not available,
+      // so we use await import() which returns the module namespace object.
+      const TreeSitter = await import("web-tree-sitter");
 
       // Initialize the WASM runtime (must be called before using any API)
       await TreeSitter.Parser.init();
@@ -121,6 +124,7 @@ export const parsers: Record<string, Parser> = {
       // Parse the source text into a tree-sitter Tree, then convert the
       // root node from tree-sitter's getter-based nodes to plain objects.
       const tree = parser.parse(text);
+      if (!tree) throw new Error("Failed to parse PDXScript input");
       return convertTree(tree.rootNode);
     },
 

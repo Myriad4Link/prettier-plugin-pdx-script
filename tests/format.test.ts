@@ -205,6 +205,10 @@ describe("CJS entry point", () => {
     expect(cjsModule).toHaveProperty("printers");
     expect(cjsModule).toHaveProperty("setGrammarBinary");
     expect(cjsModule).toHaveProperty("getGrammarBinary");
+    // locateFile overrides are also exported so bundled consumers can
+    // control web-tree-sitter's runtime WASM resolution.
+    expect(cjsModule).toHaveProperty("setLocateFile");
+    expect(cjsModule).toHaveProperty("getLocateFile");
 
     expect(cjsModule.languages).toHaveLength(1);
     expect(cjsModule.languages[0].name).toBe("PDXScript");
@@ -212,6 +216,8 @@ describe("CJS entry point", () => {
     expect(cjsModule.printers).toHaveProperty("pdx-script-ast");
     expect(typeof cjsModule.setGrammarBinary).toBe("function");
     expect(typeof cjsModule.getGrammarBinary).toBe("function");
+    expect(typeof cjsModule.setLocateFile).toBe("function");
+    expect(typeof cjsModule.getLocateFile).toBe("function");
   });
 
   test("CJS module formats PDXScript correctly", async () => {

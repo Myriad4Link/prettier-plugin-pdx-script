@@ -19,6 +19,9 @@
  * Consumers can override this via {@link setGrammarBinary} to supply the WASM
  * as a `Uint8Array` — for example when bundling or embedding the plugin.
  *
+ * The `locateFile` callback used to find web-tree-sitter's own runtime WASM
+ * can also be overridden via {@link setLocateFile}.
+ *
  * @see https://prettier.io/docs/en/plugins.html - Prettier plugin API
  */
 
@@ -113,6 +116,86 @@ export function getGrammarBinary(): GrammarBinaryLoader {
 }
 
 // ---------------------------------------------------------------------------
+// Configurable locateFile
+// ---------------------------------------------------------------------------
+// Intent: web-tree-sitter's Parser.init() accepts a locateFile callback to
+// resolve its own runtime WASM (tree-sitter.wasm). The default behavior
+// (resolve relative to scriptDir) breaks in bundled environments where the
+// script directory doesn't contain the WASM file. By exposing this as a
+// configurable hook, downstream consumers (e.g. VS Code extensions) can
+// resolve the runtime WASM from their own bundled assets without hacky
+// workarounds.
+
+/**
+ * A callback to resolve file paths relative to web-tree-sitter's script directory.
+ *
+ * Passed to `web-tree-sitter`'s `Parser.init({ locateFile })` to locate the
+ * tree-sitter runtime WASM (`tree-sitter.wasm`).
+ *
+ * @param fileName  - The file name to resolve (e.g. `"tree-sitter.wasm"`)
+ * @param scriptDir - The directory containing the web-tree-sitter JS file
+ * @returns The resolved path to the file
+ */
+export type LocateFileFn = (fileName: string, scriptDir: string) => string;
+
+/**
+ * Default locateFile: resolves the file relative to the script directory.
+ *
+ * This mirrors web-tree-sitter's own default behavior. It works when the
+ * plugin is installed normally (node_modules), but may fail when bundled
+ * because scriptDir may not point to the correct location.
+ */
+function defaultLocateFile(fileName: string, scriptDir: string): string {
+  return path.join(scriptDir, fileName);
+}
+
+/** Current locateFile function (overridden by {@link setLocateFile}). */
+let locateFileFn: LocateFileFn = defaultLocateFile;
+
+/**
+ * Override the `locateFile` callback used to locate web-tree-sitter's runtime WASM.
+ *
+ * When this plugin is bundled (e.g. in a VS Code extension), the default
+ * `locateFile` may resolve `tree-sitter.wasm` to the wrong directory.
+ * Use this function to provide a custom resolver.
+ *
+ * **Must be called before any `parse()` invocation.** If called after the
+ * parser has been initialized, a warning is logged and the new callback will
+ * not take effect until the module is reloaded.
+ *
+ * @example
+ * ```ts
+ * import { setLocateFile } from "prettier-plugin-pdx-script";
+ *
+ * setLocateFile((fileName, _scriptDir) => {
+ *   return path.join(__dirname, "wasm", fileName);
+ * });
+ * ```
+ *
+ * @param fn - A function that resolves `(fileName, scriptDir) → absolute path`
+ */
+export function setLocateFile(fn: LocateFileFn): void {
+  if (parserInitialized) {
+    console.warn(
+      "[prettier-plugin-pdx-script] setLocateFile() called after parser initialization. " +
+        "The new callback will not take effect until the module is reloaded. " +
+        "Call setLocateFile() before any parse() invocation.",
+    );
+  }
+  locateFileFn = fn;
+}
+
+/**
+ * Get the current `locateFile` callback.
+ *
+ * Returns the function used by `web-tree-sitter` to locate its runtime WASM.
+ * Useful for testing or wrapping the default resolver.
+ */
+export function getLocateFile(): LocateFileFn {
+  return locateFileFn;
+}
+
+// ---------------------------------------------------------------------------
 // Language definition
 // ---------------------------------------------------------------------------
 
@@ -173,12 +256,13 @@ function convertTree(node: any): any {
 /** Cached tree-sitter parser instance (initialized lazily, once). */
 let cachedParser: any = null;
 
-/** Whether the tree-sitter parser has been initialized.
+/**
+ * Whether the tree-sitter parser has been initialized.
  *
- * Used by {@link setGrammarBinary} to warn if the loader is changed after
- * initialization — the cached parser would still use the old loader, causing
- * silent misconfiguration for bundling consumers who call setGrammarBinary()
- * too late in the lifecycle.
+ * Used by {@link setGrammarBinary} and {@link setLocateFile} to warn if
+ * configuration is changed after init — the cached parser would still use
+ * the old settings, causing silent misconfiguration for bundling consumers
+ * who call setGrammarBinary() / setLocateFile() too late in the lifecycle.
  */
 let parserInitialized = false;
 
@@ -200,20 +284,16 @@ async function getOrInitParser(): Promise<any> {
 
   const TreeSitter = await import("web-tree-sitter");
 
-  // Initialize the WASM runtime with an explicit locateFile callback.
-  // This ensures CJS consumers (where import.meta.url is not available)
-  // can still locate web-tree-sitter's own wasm binary.
-  //
-  // Limitation: when this plugin is bundled (e.g. by a consumer's webpack/esbuild),
-  // scriptDir may point to the bundle output directory, not the web-tree-sitter
-  // package. In that scenario the consumer must call setGrammarBinary() to supply
-  // the grammar WASM directly. See the README "Bundling" section for details.
+  // Initialize the WASM runtime with the configurable locateFile callback.
+  // Intent: web-tree-sitter requires a locateFile callback to find its own
+  // runtime WASM (tree-sitter.wasm). The default resolves relative to scriptDir,
+  // which works for unbundled use. When bundled (e.g. by a VS Code extension's
+  // webpack/esbuild build), scriptDir may point to the bundle output — not the
+  // web-tree-sitter package. Letting consumers override locateFile via
+  // setLocateFile() eliminates the need for downstream workarounds like
+  // manual script injection or dynamic require hacks.
   await TreeSitter.Parser.init({
-    locateFile: (file: string, scriptDir: string) => {
-      // scriptDir is the directory containing web-tree-sitter.js.
-      // We resolve the wasm file relative to it.
-      return path.join(scriptDir, file);
-    },
+    locateFile: locateFileFn,
   });
 
   // Load the PDXScript grammar via the configurable loader.

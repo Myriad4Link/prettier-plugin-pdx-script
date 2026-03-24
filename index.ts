@@ -76,6 +76,11 @@ let grammarBinaryLoader: GrammarBinaryLoader = defaultGrammarBinaryLoader;
  * Use this when bundling the plugin (e.g. in a VS Code extension) where the
  * WASM file cannot be loaded from the plugin's package directory.
  *
+ * **Must be called before any `parse()` invocation.** If called after the
+ * parser has been initialized, a warning is logged and the new loader will
+ * not take effect until the module is reloaded (because the parser singleton
+ * is already cached with the previous loader's result).
+ *
  * @example
  * ```ts
  * import { setGrammarBinary } from "prettier-plugin-pdx-script";
@@ -87,6 +92,13 @@ let grammarBinaryLoader: GrammarBinaryLoader = defaultGrammarBinaryLoader;
  * @param loader - A function returning the grammar WASM as `Uint8Array`
  */
 export function setGrammarBinary(loader: GrammarBinaryLoader): void {
+  if (parserInitialized) {
+    console.warn(
+      "[prettier-plugin-pdx-script] setGrammarBinary() called after parser initialization. " +
+        "The new loader will not take effect until the module is reloaded. " +
+        "Call setGrammarBinary() before any parse() invocation.",
+    );
+  }
   grammarBinaryLoader = loader;
 }
 
@@ -161,6 +173,15 @@ function convertTree(node: any): any {
 /** Cached tree-sitter parser instance (initialized lazily, once). */
 let cachedParser: any = null;
 
+/** Whether the tree-sitter parser has been initialized.
+ *
+ * Used by {@link setGrammarBinary} to warn if the loader is changed after
+ * initialization — the cached parser would still use the old loader, causing
+ * silent misconfiguration for bundling consumers who call setGrammarBinary()
+ * too late in the lifecycle.
+ */
+let parserInitialized = false;
+
 /**
  * Lazily initialize and return the tree-sitter parser singleton.
  *
@@ -182,6 +203,11 @@ async function getOrInitParser(): Promise<any> {
   // Initialize the WASM runtime with an explicit locateFile callback.
   // This ensures CJS consumers (where import.meta.url is not available)
   // can still locate web-tree-sitter's own wasm binary.
+  //
+  // Limitation: when this plugin is bundled (e.g. by a consumer's webpack/esbuild),
+  // scriptDir may point to the bundle output directory, not the web-tree-sitter
+  // package. In that scenario the consumer must call setGrammarBinary() to supply
+  // the grammar WASM directly. See the README "Bundling" section for details.
   await TreeSitter.Parser.init({
     locateFile: (file: string, scriptDir: string) => {
       // scriptDir is the directory containing web-tree-sitter.js.
@@ -190,12 +216,23 @@ async function getOrInitParser(): Promise<any> {
     },
   });
 
-  // Load the PDXScript grammar via the configurable loader
+  // Load the PDXScript grammar via the configurable loader.
+  // Validate the return type up front: if the loader returns null/undefined
+  // (e.g. misconfigured bundler injection), TreeSitter.Language.load() would
+  // throw a cryptic WASM error. A clear message here saves debugging time.
   const binary = await grammarBinaryLoader();
+  if (!(binary instanceof Uint8Array)) {
+    throw new Error(
+      "[prettier-plugin-pdx-script] GrammarBinaryLoader must return a Uint8Array, " +
+        `got ${binary === null ? "null" : typeof binary}. ` +
+        "Check your setGrammarBinary() callback.",
+    );
+  }
   const PDXScript = await TreeSitter.Language.load(binary);
 
   cachedParser = new TreeSitter.Parser();
   cachedParser.setLanguage(PDXScript);
+  parserInitialized = true;
 
   return cachedParser;
 }

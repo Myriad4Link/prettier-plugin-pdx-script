@@ -24,6 +24,9 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+// createRequire lets us simulate CJS require() from this ESM test file.
+// Bare require() is not available in ESM under Node.js (only Bun polyfills it).
+import { createRequire } from "node:module";
 import { describe, test, expect } from "bun:test";
 import * as prettier from "prettier";
 import * as plugin from "../index.ts";
@@ -186,13 +189,16 @@ describe("formatter fixtures", () => {
  */
 describe("CJS entry point", () => {
   const distCjsPath = path.join(import.meta.dir, "..", "dist", "index.cjs");
+  // createRequire produces a require() function scoped to this module's URL.
+  // This lets ESM test files load CJS modules portably (works in both Node.js and Bun).
+  const cjsRequire = createRequire(import.meta.url);
 
   test("dist/index.cjs exists", () => {
     expect(fs.existsSync(distCjsPath)).toBe(true);
   });
 
   test("CJS require() loads and exports expected shape", () => {
-    const cjsModule = require(distCjsPath);
+    const cjsModule = cjsRequire(distCjsPath);
 
     expect(cjsModule).toHaveProperty("languages");
     expect(cjsModule).toHaveProperty("parsers");
@@ -209,8 +215,8 @@ describe("CJS entry point", () => {
   });
 
   test("CJS module formats PDXScript correctly", async () => {
-    const cjsModule = require(distCjsPath);
-    const prettierMod = require("prettier");
+    const cjsModule = cjsRequire(distCjsPath);
+    const prettierMod = cjsRequire("prettier");
 
     const result = await prettierMod.format("my_decl={key=value}", {
       parser: "pdx-script-parse",

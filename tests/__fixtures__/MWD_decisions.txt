@@ -1,0 +1,787 @@
+# 关于ai_will_do：
+# 我的思路是让AI在同一时期只执行一项奇迹的说。 - M4L, 2025/08/02
+MWD_kiseki_decisions = {
+	# 神符「结于杉木之古缘」，以下符卡翻译均来自https://en.touhouwiki.net/wiki/List_of_Spell_Cards。
+	# 特殊地，对于则里的卡，翻译／命名来源于https://en.touhouwiki.net/wiki/Touhou_Hisoutensoku/Spell_Cards。
+	god_sign_ancient_fate_linked_by_cedars = {
+		available = {
+			custom_trigger_tooltip = {
+				tooltip = "empty_placeholder"
+				MWD = {
+					check_variable = {
+						var = divine_virtue
+						value = 50
+						compare = greater_than_or_equals
+					}
+				}
+			}
+		}
+		
+		fixed_random_seed = no
+
+		custom_cost_trigger = {
+			check_variable = {
+				var = divine_virtue
+				value = 50
+				compare = greater_than_or_equals
+			}
+		}
+
+		custom_cost_text = "divine_virtue_cost_50"
+
+		modifier = {
+			consumer_goods_factor = 0.02
+		}
+
+		complete_effect = {
+			MWD = {
+				random_owned_state = {
+					add_extra_state_shared_building_slots = 1
+					# TODO
+				}
+			}
+
+			hidden_effect = {
+				MWD = {
+					subtract_from_variable = {
+						var = divine_virtue
+						value = 50
+					}
+
+					set_country_flag = is_performing_kiseki
+				}
+			}
+		}
+
+		remove_effect = {
+			MWD = {
+				clr_country_flag = is_performing_kiseki
+			}
+		}
+
+		days_remove = 100
+		days_re_enable = 30
+
+		ai_will_do = {
+			base = 0
+			modifier = {
+				add = 10
+				MWD = {
+					AND = {
+						check_variable = {
+							var = divine_virtue
+							value = 50
+							compare = greater_than_or_equals
+						}
+
+						NOT = {
+							has_country_flag = is_performing_kiseki
+						}
+					}
+				}
+			}
+		}
+	}
+
+	# 神具「洩矢的铁轮」。
+	divine_tool_moriya_s_iron_ring = {
+		available = {
+			custom_trigger_tooltip = {
+				tooltip = "empty_placeholder"
+				MWD = {
+					check_variable = {
+						var = divine_virtue
+						value = 50
+						compare = greater_than_or_equals
+					}
+				}
+			}
+		}
+
+		custom_cost_trigger = {
+			check_variable = {
+				var = divine_virtue
+				value = 50
+				compare = greater_than_or_equals
+			}
+		}
+
+		custom_cost_text = "divine_virtue_cost_50"
+
+		complete_effect = {
+			MWD = {
+				add_command_power = 15
+				army_experience = 45
+			}
+
+			hidden_effect = {
+				MWD = {
+					subtract_from_variable = {
+						var = divine_virtue
+						value = 50
+					}
+
+					set_country_flag = is_performing_kiseki
+				}
+			}
+		}
+
+		modifier = {
+			army_org_regain = 0.1
+			war_support_weekly = 0.002
+			army_attack_factor = 0.075
+			army_defence_factor = 0.035
+			breakthrough_factor = 0.125
+
+			# TODO
+		}
+
+		remove_effect = {
+			MWD = {
+				clr_country_flag = is_performing_kiseki
+			}
+		}
+	
+		days_remove = 45
+		days_re_enable = 30
+
+		ai_will_do = {
+			base = 0
+			modifier = {
+				add = 10
+				MWD = {
+					AND = {
+						check_variable = {
+							var = divine_virtue
+							value = 50
+							compare = greater_than_or_equals
+						}
+
+						NOT = {
+							has_country_flag = is_performing_kiseki
+						}
+					}
+				}
+			}
+		}
+	}
+
+	# 「神明的威光」
+	sacred_authority_of_the_gods = {
+		available = {
+			custom_trigger_tooltip = {
+				tooltip = "empty_placeholder"
+				MWD = {
+					check_variable = {
+						var = divine_virtue
+						value = 30
+						compare = greater_than_or_equals
+					}
+				}
+			}
+		}
+
+		custom_cost_trigger = {
+			check_variable = {
+				var = divine_virtue
+				value = 30
+				compare = greater_than_or_equals
+			}
+		}
+
+		custom_cost_text = "divine_virtue_cost_30"
+
+		complete_effect = {
+			hidden_effect = {
+				MWD = {
+					subtract_from_variable = {
+						var = divine_virtue
+						value = 30
+					}
+
+					set_country_flag = is_performing_kiseki
+				}
+			}
+		}
+
+		modifier = {
+			political_power_factor = -0.1
+			stability_weekly_factor = 0.001
+		}
+
+		remove_effect = {
+			MWD = {
+				add_stability = 0.05
+				add_war_support = 0.10
+				add_manpower = 400
+				# TODO
+
+				clr_country_flag = is_performing_kiseki
+			}
+		}
+
+		days_remove = 30
+		days_re_enable = 90
+
+		ai_will_do = {
+			base = 0
+			modifier = {
+				add = 10
+				MWD = {
+					AND = {
+						check_variable = {
+							var = divine_virtue
+							value = 30
+							compare = greater_than_or_equals
+						}
+
+						NOT = {
+							has_country_flag = is_performing_kiseki
+						}
+					}
+				}
+			}
+		}
+	}
+
+	# 祟神「赤口大人」
+	scourge_god_mishaguchi_sama = {
+		available = {
+			custom_trigger_tooltip = {
+				tooltip = "scourge_god_mishaguchi_sama_available_tooltip"
+				MWD = {
+					AND = {
+						check_variable = {
+							human_attitude > 6
+						}
+
+						has_political_power > 39.999
+					}
+				}
+			}
+		}
+
+		fixed_random_seed = no
+		cost = 40
+		
+		complete_effect = {
+			hidden_effect = {
+				do_MWD_scourge_god_mishaguchi_sama_divine_virtue_random_increment = yes
+				do_MWD_scourge_god_mishaguchi_sama_human_attitude_random_decrease = yes
+				do_MWD_scourge_god_mishaguchi_sama_youkai_status_random_increment = yes
+
+				add_to_variable = {
+					var = tarati_count
+					value = 1
+				}
+			}
+
+			custom_effect_tooltip = "scourge_god_mishaguchi_sama_complete_effect_tooltip"
+		}
+
+		# 由于这个决策有点副作用，所以我让AI如果不是真缺神德了就不会执行这个决策。
+		# M4L, 2025/08/01
+		ai_will_do = {
+			base = 1
+			modifier = {
+				MWD = {
+					check_variable = {
+						var = divine_virtue
+						value = 10
+						compare = greater_than_or_equals
+					}
+				}
+				add = -1
+			}
+		}
+
+		days_re_enable = 120
+	}
+
+	# 招雨的雨蛙
+	rain_calling_frog = {
+		available = {
+			custom_trigger_tooltip = {
+				tooltip = "empty_placeholder"
+				MWD = {
+					check_variable = {
+						var = divine_virtue
+						value = 15
+						compare = greater_than_or_equals
+					}
+				}
+			}
+		}
+
+		custom_cost_trigger = {
+			check_variable = {
+				var = divine_virtue
+				value = 15
+				compare = greater_than_or_equals
+			}
+		}
+
+		custom_cost_text = "divine_virtue_cost_15"
+
+		complete_effect = {
+			MWD = {
+				random_state = {
+					add_extra_state_shared_building_slots = 1
+					add_building_construction = {
+						type = infrastructure
+						level = 1
+						instant_build = yes
+						province = {
+							all_provinces = no
+							id = THIS
+						}
+					}
+				}
+
+				random_state = {
+					add_extra_state_shared_building_slots = 1
+					add_building_construction = {
+						type = infrastructure
+						level = 1
+						instant_build = yes
+						province = {
+							all_provinces = no
+							id = THIS
+						}
+					}
+				}
+
+				# TODO
+			}
+		}
+
+		fixed_random_seed = no
+
+		modifier = {
+			political_power_gain = -0.05
+			consumer_goods_factor = -0.15
+		}
+
+		days_remove = 30
+		days_re_enable = 90
+
+		remove_effect = {
+			MWD = {
+				clr_country_flag = is_performing_kiseki
+			}
+		}
+
+		ai_will_do = {
+			base = 0
+			modifier = {
+				add = 10
+				MWD = {
+					AND = {
+						check_variable = {
+							var = divine_virtue
+							value = 15
+							compare = greater_than_or_equals
+						}
+
+						NOT = {
+							has_country_flag = is_performing_kiseki
+						}
+					}
+				}
+			}
+		}
+	}
+
+	# 平土
+	heito = {
+		available = {
+			custom_trigger_tooltip = {
+				tooltip = "empty_placeholder"
+				MWD = {
+					check_variable = {
+						var = divine_virtue
+						value = 20
+						compare = greater_than_or_equals
+					}
+				}
+			}
+		}
+
+		fixed_random_seed = no
+
+		custom_cost_trigger = {
+			check_variable = {
+				var = divine_virtue
+				value = 20
+				compare = greater_than_or_equals
+			}
+		}
+
+		custom_cost_text = "divine_virtue_cost_20"
+
+		complete_effect = {
+			MWD = {
+				random_owned_state = {
+					add_extra_state_shared_building_slots = 2
+				}
+			}
+
+			hidden_effect = {
+				MWD = {
+					subtract_from_variable = {
+						var = divine_virtue
+						value = 20
+					}
+
+					set_country_flag = is_performing_kiseki
+				}
+			}
+		}
+
+		remove_effect = {
+			MWD = {
+				clr_country_flag = is_performing_kiseki
+			}
+		}
+
+		days_remove = 30
+		days_re_enable = 90
+
+		ai_will_do = {
+			base = 0
+			modifier = {
+				add = 10
+				MWD = {
+					AND = {
+						check_variable = {
+							var = divine_virtue
+							value = 20
+							compare = greater_than_or_equals
+						}
+
+						NOT = {
+							has_country_flag = is_performing_kiseki
+						}
+					}
+				}
+			}
+		}
+	}
+
+	# 丰壤
+	hojo = {
+        available = {
+            custom_trigger_tooltip = {
+                tooltip = "empty_placeholder"
+                MWD = {
+                    check_variable = {
+                        var = divine_virtue
+                        value = 20
+                        compare = greater_than_or_equals
+                    }
+                }
+            }
+        }
+
+        fixed_random_seed = no
+
+        custom_cost_trigger = {
+            check_variable = {
+                var = divine_virtue
+                value = 20
+                compare = greater_than_or_equals
+            }
+        }
+
+        custom_cost_text = "divine_virtue_cost_20"
+
+        complete_effect = {
+            hidden_effect = {
+                MWD = {
+					randomize_temp_variable = {
+						var = hojo_human_attitude_gain
+						distribution = uniform
+						min = 5
+						max = 10
+					}
+					round_temp_variable = hojo_human_attitude_gain
+
+					add_to_variable = { 
+						var = human_attitude 
+						value = var:hojo_human_attitude_gain 
+					}
+
+					clamp_variable = {
+						var = human_attitude
+						min = 0
+						max = 100
+					}
+
+                    subtract_from_variable = {
+                        var = divine_virtue
+                        value = 20
+                    }
+
+                    set_country_flag = is_performing_kiseki
+                }
+            }
+        }
+
+        modifier = {
+            consumer_goods_factor = -0.05
+            manpower_factor = 0.15
+        }
+
+        remove_effect = {
+            MWD = {
+                clr_country_flag = is_performing_kiseki
+            }
+        }
+
+        days_remove = 30
+        days_re_enable = 90
+
+        ai_will_do = {
+            base = 0
+            modifier = {
+                add = 10
+                MWD = {
+                    AND = {
+                        check_variable = {
+                            var = divine_virtue
+                            value = 20
+                            compare = greater_than_or_equals
+                        }
+
+                        NOT = {
+                            has_country_flag = is_performing_kiseki
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+	# 祛疾
+	jobyo = {
+		available = {
+            custom_trigger_tooltip = {
+                tooltip = "empty_placeholder"
+                MWD = {
+                    check_variable = {
+                        var = divine_virtue
+                        value = 15
+                        compare = greater_than_or_equals
+                    }
+                }
+            }
+        }
+
+        fixed_random_seed = no
+
+        custom_cost_trigger = {
+            check_variable = {
+                var = divine_virtue
+                value = 15
+                compare = greater_than_or_equals
+            }
+        }
+
+        custom_cost_text = "divine_virtue_cost_15"
+
+        complete_effect = {
+            hidden_effect = {
+                MWD = {
+					set_variable = {
+						jobyo_divine_virtue_gain_rate_per_week = 0.10
+					}
+
+					set_variable = {
+						jobyo_human_attitude_gain_per_week = 0.05
+					}
+
+                    set_country_flag = is_performing_kiseki
+                }
+            }
+        }
+
+        modifier = {
+            army_strength_factor = 0.04
+			stability_weekly_factor = 0.014
+			recruitable_population_factor = 0.03
+			land_reinforce_rate = 0.2
+			divine_virtue_gain_rate_per_week = 0.10
+			human_attitude_gain_per_week = 5
+        }
+
+        remove_effect = {
+            MWD = {
+                clr_country_flag = is_performing_kiseki
+
+				hidden_effect = {
+					set_variable = {
+						jobyo_divine_virtue_gain_rate_per_week = 0
+					}
+
+					set_variable = {
+						jobyo_human_attitude_gain_per_week = 0
+					}
+				}
+            }
+        }
+
+        days_remove = 30
+        days_re_enable = 90
+
+        ai_will_do = {
+            base = 0
+            modifier = {
+                add = 10
+                MWD = {
+                    AND = {
+                        check_variable = {
+                            var = divine_virtue
+                            value = 15
+                            compare = greater_than_or_equals
+                        }
+
+                        NOT = {
+                            has_country_flag = is_performing_kiseki
+                        }
+                    }
+                }
+            }
+        }
+	}
+
+	# 开慧
+	keimo = {
+		available = {
+            custom_trigger_tooltip = {
+                tooltip = "empty_placeholder"
+                MWD = {
+                    check_variable = {
+                        var = divine_virtue
+                        value = 30
+                        compare = greater_than_or_equals
+                    }
+                }
+            }
+        }
+
+        fixed_random_seed = no
+
+        custom_cost_trigger = {
+            check_variable = {
+                var = divine_virtue
+                value = 30
+                compare = greater_than_or_equals
+            }
+        }
+
+        custom_cost_text = "divine_virtue_cost_30"
+
+        complete_effect = {
+            hidden_effect = {
+                MWD = {
+                    set_country_flag = is_performing_kiseki
+                }
+            }
+        }
+
+        modifier = {
+			political_power_gain = -0.05
+			research_speed_factor = 0.2
+        }
+
+        remove_effect = {
+            MWD = {
+                clr_country_flag = is_performing_kiseki
+
+				add_tech_bonus = {
+					bonus = 0.30
+					ahead_reduction = 1.5
+					uses = 1
+					category = infantry_weapons
+				}
+
+				add_tech_bonus = {
+					bonus = 0.5
+					uses = 1
+					category = electronics
+					category = encryption_tech
+					category = decryption_tech
+					category = computing_tech
+					category = radar_tech
+					category = cat_fortification
+					category = rocketry
+					category = nuclear
+				}
+            }
+        }
+
+        days_remove = 30
+        days_re_enable = 90
+
+        ai_will_do = {
+            base = 0
+            modifier = {
+                add = 10
+                MWD = {
+                    AND = {
+                        check_variable = {
+                            var = divine_virtue
+                            value = 30
+                            compare = greater_than_or_equals
+                        }
+
+                        NOT = {
+                            has_country_flag = is_performing_kiseki
+                        }
+                    }
+                }
+            }
+        }
+	}
+
+	# 圣遗物，用来调试用的
+	# 有点方便的说（
+	# test = {
+	# 	fixed_random_seed = no
+
+	# 	complete_effect = {
+	# 		# MWD = {
+	# 			set_variable = { 
+	# 				var = test_dummy
+	# 				value = 114514
+	# 			}
+				
+	# # 			multiply_variable = {
+	# # 				var = test_dummy
+	# # 				value = 4.2
+	# # 			}
+
+	# # 			add_to_variable = { var = test_dummy value = 1.145 }
+
+	# # 			modulo_variable = {
+	# # 				var = test_dummy
+	# # 				value = 2097.152
+	# # 			}
+
+	# # 			divide_variable = {
+	# # 				var = test_dummy
+	# # 				value = 2097.152
+	# # 			}
+
+	# 			# set_variable_to_random = {
+	# 			# 	var = test_dummy
+	# 			# 	min = 1
+	# 			# 	max = 10000
+	# 			# 	integer = yes
+	# 			# }
+
+	# 			randomize_variable = var:test_dummy
+	# 		# }
+	# 	}
+	# }
+}

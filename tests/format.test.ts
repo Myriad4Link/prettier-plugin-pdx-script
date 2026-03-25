@@ -313,3 +313,20 @@ describe("CJS entry point", () => {
     expect(result).toBe("my_decl = {\n\tkey = value\n}\n");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Regression: convertTree() OOM on large files (#8)
+// ---------------------------------------------------------------------------
+describe("regression: issue #8 – convertTree() OOM on large files", () => {
+  const LARGE_FILE = path.join(FIXTURES_DIR, "MWD_decisions.txt");
+
+  test("formats a 15KB+ PDXScript file without OOM", async () => {
+    expect(fs.existsSync(LARGE_FILE)).toBe(true);
+    const input = fs.readFileSync(LARGE_FILE, "utf-8");
+
+    // Should complete in reasonable time/memory without crashing
+    const result = await format(input);
+    expect(typeof result).toBe("string");
+    expect(result.length).toBeGreaterThan(0);
+  });
+});

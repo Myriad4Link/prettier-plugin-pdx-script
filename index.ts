@@ -267,14 +267,15 @@ export const languages: SupportLanguage[] = [
  *   - `namedChildren`: Only the named child nodes, converted recursively
  */
 function convertTree(node: any): any {
+  const converted = node.children.map(convertTree);
   return {
     type: node.type,
     text: node.text,
     startIndex: node.startIndex,
     endIndex: node.endIndex,
     isNamed: node.isNamed,
-    children: node.children.map(convertTree),
-    namedChildren: node.namedChildren.map(convertTree),
+    children: converted,
+    namedChildren: converted.filter((n: any) => n.isNamed),
   };
 }
 

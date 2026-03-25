@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-rc.6] - 2026-03-26
+
+### Fixed
+
+- **`convertTree()` OOM on large files** — The AST conversion function called
+  `.map(convertTree)` on both `children` and `namedChildren` arrays in the same
+  recursive traversal. Since `namedChildren` is a subset of `children`, every
+  named node was visited twice, causing exponential memory growth when the
+  tree-sitter WASM layer allocates Node wrappers for each accessor call.
+  Files with 2000+ nodes (e.g. 15KB PDXScript) would exhaust a 4 GB heap.
+  Now uses a single pass: `children.map(convertTree)` + `converted.filter(n => n.isNamed)`
+  for `namedChildren`. Identical output, ~1.6 MB heap for the same file. (closes #8)
+
 ## [0.1.0-rc.5] - 2026-03-26
 
 ### Added

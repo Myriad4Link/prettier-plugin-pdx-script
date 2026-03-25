@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-rc.5] - 2026-03-26
+
+### Added
+
+- **`resetParser()` / `disposeParser()`** — Clears the cached tree-sitter parser
+  singleton so the next `parse()` call re-initializes with the current
+  `grammarBinaryLoader` and `locateFileFn` settings. (closes #5)
+  - `resetParser()` — nulls the parser and resets the init flag
+  - `disposeParser()` — same + calls `parser.delete()` for WASM resource cleanup
+  - Enables test isolation (call in `beforeEach`) and recovery from bad
+    `setGrammarBinary()` calls without reloading the module.
+- **`getGrammarWasmPath()`** — Resolves the grammar WASM path relative to the
+  module's `__dirname` (captured at load time, before bundlers rewrite it).
+  Works reliably across CJS/ESM and bundled/unbundled environments. (addresses #3)
+  - `defaultGrammarBinaryLoader` now uses this internally (DRY).
+- **`PARSER_NAME` constant** — Exports `"pdx-script-parse"` as a named constant,
+  removing the fragile magic string from consumers and internal usage. (addresses #4)
+
+### Changed
+
+- `languages` and `parsers` now reference `PARSER_NAME` instead of a hardcoded
+  string literal.
+
 ## [0.1.0-rc.4] - 2026-03-25
 
 ### Fixed

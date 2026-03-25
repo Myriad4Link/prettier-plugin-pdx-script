@@ -112,13 +112,19 @@ This package ships both ESM and CJS entry points:
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "exports": {
-    "import": "./dist/index.js",
-    "require": "./dist/index.cjs"
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./dist/tree-sitter/tree-sitter-pdx_script.wasm": "./dist/tree-sitter/tree-sitter-pdx_script.wasm",
+    "./package.json": "./package.json"
   }
 }
 ```
 
 ESM consumers use `import`, CJS consumers use `require()` — no dynamic `await import()` needed.
+
+The grammar WASM is also accessible via `require.resolve("prettier-plugin-pdx-script/dist/tree-sitter/tree-sitter-pdx_script.wasm")` for use with `setGrammarBinary()`.
 
 ## API
 

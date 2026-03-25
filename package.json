@@ -1,13 +1,17 @@
 {
   "name": "prettier-plugin-pdx-script",
-  "version": "0.1.0-rc.3",
+  "version": "0.1.0-rc.4",
   "description": "Prettier plugin for formatting PDXScript (Paradox game script) files",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "exports": {
-    "import": "./dist/index.js",
-    "require": "./dist/index.cjs"
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./dist/tree-sitter/tree-sitter-pdx_script.wasm": "./dist/tree-sitter/tree-sitter-pdx_script.wasm",
+    "./package.json": "./package.json"
   },
   "types": "./dist/index.d.ts",
   "files": [

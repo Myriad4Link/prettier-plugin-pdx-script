@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-rc.4] - 2026-03-25
+
+### Fixed
+
+- **Exports field exposes grammar WASM and package.json subpaths** — The
+  `exports` field previously only listed the main entry point, blocking
+  `require.resolve()` for the grammar WASM subpath. Downstream consumers
+  (e.g. VS Code extensions) can now reliably resolve the WASM path via
+  `require.resolve("prettier-plugin-pdx-script/dist/tree-sitter/tree-sitter-pdx_script.wasm")`
+  for use with `setGrammarBinary()`, eliminating fragile workarounds like
+  `__dirname` path concatenation.
+- `./package.json` is now explicitly exported, which is standard practice for
+  npm packages and needed by some tooling (e.g. `npm ls` metadata inspection).
+- README updated to document the new exports shape and WASM resolution path.
+
 ## [0.1.0-rc.3] - 2026-03-24
 
 ### Added

@@ -178,6 +178,77 @@ describe("formatter fixtures", () => {
 });
 
 // ---------------------------------------------------------------------------
+// New exports tests (issues #3, #4, #5)
+// ---------------------------------------------------------------------------
+
+describe("PARSER_NAME", () => {
+  test("exports the correct parser name", () => {
+    expect(plugin.PARSER_NAME).toBe("pdx-script-parse");
+  });
+
+  test("PARSER_NAME matches the parsers key", () => {
+    expect(plugin.parsers).toHaveProperty(plugin.PARSER_NAME);
+  });
+
+  test("PARSER_NAME matches the language parser", () => {
+    expect(plugin.languages[0].parsers).toContain(plugin.PARSER_NAME);
+  });
+});
+
+describe("getGrammarWasmPath", () => {
+  test("returns a string path", () => {
+    const wasmPath = plugin.getGrammarWasmPath();
+    expect(typeof wasmPath).toBe("string");
+    expect(wasmPath).toContain("tree-sitter-pdx_script.wasm");
+  });
+
+  test("path points to an existing file", () => {
+    const wasmPath = plugin.getGrammarWasmPath();
+    expect(fs.existsSync(wasmPath)).toBe(true);
+  });
+});
+
+describe("resetParser", () => {
+  test("allows re-initialization with new settings", async () => {
+    // Parse once to initialize
+    const input1 = "decl1 = { key = value }";
+    const result1 = await format(input1);
+    expect(result1).toContain("decl1");
+
+    // Reset and verify parsing still works
+    plugin.resetParser();
+    const input2 = "decl2 = { other = test }";
+    const result2 = await format(input2);
+    expect(result2).toContain("decl2");
+  });
+
+  test("does not throw when called before initialization", () => {
+    plugin.resetParser();
+    // Should not throw
+  });
+});
+
+describe("disposeParser", () => {
+  test("allows re-initialization after dispose", async () => {
+    // Parse once to initialize
+    const input1 = "decl1 = { key = value }";
+    const result1 = await format(input1);
+    expect(result1).toContain("decl1");
+
+    // Dispose and verify parsing still works
+    plugin.disposeParser();
+    const input2 = "decl2 = { other = test }";
+    const result2 = await format(input2);
+    expect(result2).toContain("decl2");
+  });
+
+  test("does not throw when called before initialization", () => {
+    plugin.disposeParser();
+    // Should not throw
+  });
+});
+
+// ---------------------------------------------------------------------------
 // CJS entry point tests
 // ---------------------------------------------------------------------------
 
@@ -209,6 +280,11 @@ describe("CJS entry point", () => {
     // control web-tree-sitter's runtime WASM resolution.
     expect(cjsModule).toHaveProperty("setLocateFile");
     expect(cjsModule).toHaveProperty("getLocateFile");
+    // New exports from issues #3, #4, #5
+    expect(cjsModule).toHaveProperty("PARSER_NAME");
+    expect(cjsModule).toHaveProperty("getGrammarWasmPath");
+    expect(cjsModule).toHaveProperty("resetParser");
+    expect(cjsModule).toHaveProperty("disposeParser");
 
     expect(cjsModule.languages).toHaveLength(1);
     expect(cjsModule.languages[0].name).toBe("PDXScript");
@@ -218,6 +294,10 @@ describe("CJS entry point", () => {
     expect(typeof cjsModule.getGrammarBinary).toBe("function");
     expect(typeof cjsModule.setLocateFile).toBe("function");
     expect(typeof cjsModule.getLocateFile).toBe("function");
+    expect(cjsModule.PARSER_NAME).toBe("pdx-script-parse");
+    expect(typeof cjsModule.getGrammarWasmPath).toBe("function");
+    expect(typeof cjsModule.resetParser).toBe("function");
+    expect(typeof cjsModule.disposeParser).toBe("function");
   });
 
   test("CJS module formats PDXScript correctly", async () => {

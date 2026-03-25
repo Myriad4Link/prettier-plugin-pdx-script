@@ -61,13 +61,25 @@ try {
 export type GrammarBinaryLoader = () => Uint8Array | Promise<Uint8Array>;
 
 /**
+ * Resolve the absolute path to the PDXScript grammar WASM file.
+ *
+ * Returns the path relative to this module's directory, which is captured at
+ * load time (before bundlers can rewrite `__dirname`). This works reliably
+ * across CJS/ESM and bundled/unbundled environments.
+ *
+ * Consumers can use this to obtain the WASM path for custom loading scenarios
+ * without needing to parse `package.json` exports themselves.
+ */
+export function getGrammarWasmPath(): string {
+  return path.join(__dirname_, "tree-sitter/tree-sitter-pdx_script.wasm");
+}
+
+/**
  * Default grammar binary loader: reads the WASM file from the package's
  * `tree-sitter/` directory relative to this module.
  */
 function defaultGrammarBinaryLoader(): Uint8Array {
-  return readFileSync(
-    path.join(__dirname_, "tree-sitter/tree-sitter-pdx_script.wasm"),
-  );
+  return readFileSync(getGrammarWasmPath());
 }
 
 /** Current grammar binary loader (overridden by {@link setGrammarBinary}). */
@@ -196,6 +208,23 @@ export function getLocateFile(): LocateFileFn {
 }
 
 // ---------------------------------------------------------------------------
+// Parser name
+// ---------------------------------------------------------------------------
+
+/**
+ * The parser name registered by this plugin.
+ *
+ * Exported so consumers can reference the parser without a fragile magic string.
+ *
+ * @example
+ * ```ts
+ * import { PARSER_NAME } from "prettier-plugin-pdx-script";
+ * prettier.format(text, { parser: PARSER_NAME, plugins: [plugin] });
+ * ```
+ */
+export const PARSER_NAME = "pdx-script-parse";
+
+// ---------------------------------------------------------------------------
 // Language definition
 // ---------------------------------------------------------------------------
 
@@ -209,7 +238,7 @@ export function getLocateFile(): LocateFileFn {
 export const languages: SupportLanguage[] = [
   {
     name: "PDXScript",
-    parsers: ["pdx-script-parse"],
+    parsers: [PARSER_NAME],
     extensions: [".txt"],
   },
 ];
@@ -265,6 +294,38 @@ let cachedParser: any = null;
  * who call setGrammarBinary() / setLocateFile() too late in the lifecycle.
  */
 let parserInitialized = false;
+
+/**
+ * Reset the cached tree-sitter parser singleton.
+ *
+ * Clears the cached parser and resets the initialization flag so the next
+ * `parse()` call will re-initialize with the current `grammarBinaryLoader`
+ * and `locateFileFn` settings.
+ *
+ * Useful for test isolation (call in `beforeEach`) or recovering from a
+ * bad `setGrammarBinary()` call without reloading the module.
+ */
+export function resetParser(): void {
+  cachedParser = null;
+  parserInitialized = false;
+}
+
+/**
+ * Dispose of the cached tree-sitter parser and free its resources.
+ *
+ * Calls `parser.delete()` for proper tree-sitter WASM resource cleanup,
+ * then clears the singleton. The next `parse()` call will re-initialize.
+ *
+ * Use this instead of `resetParser()` when you want to ensure tree-sitter's
+ * internal WASM memory is released (e.g. in long-running processes).
+ */
+export function disposeParser(): void {
+  if (cachedParser) {
+    cachedParser.delete();
+    cachedParser = null;
+  }
+  parserInitialized = false;
+}
 
 /**
  * Lazily initialize and return the tree-sitter parser singleton.
@@ -335,7 +396,7 @@ async function getOrInitParser(): Promise<any> {
  * re-initialization cost.
  */
 export const parsers: Record<string, Parser> = {
-  "pdx-script-parse": {
+  [PARSER_NAME]: {
     /**
      * Parse PDXScript source text into a plain-object AST.
      *

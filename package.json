@@ -38,7 +38,9 @@
   "scripts": {
     "build": "tsup && bun -e \"import { cpSync, mkdirSync } from 'node:fs'; mkdirSync('dist/tree-sitter', { recursive: true }); cpSync('tree-sitter/tree-sitter-pdx_script.wasm', 'dist/tree-sitter/tree-sitter-pdx_script.wasm')\"",
     "prepublishOnly": "bun run build",
-    "test": "bun test"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "prettier": "^3.8.1",
@@ -46,7 +48,9 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@vitest/coverage-v8": "^4.1.1",
     "tsup": "^8.5.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.1"
   }
 }

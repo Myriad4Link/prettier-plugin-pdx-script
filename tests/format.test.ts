@@ -27,12 +27,12 @@ import * as path from "node:path";
 // createRequire lets us simulate CJS require() from this ESM test file.
 // Bare require() is not available in ESM under Node.js (only Bun polyfills it).
 import { createRequire } from "node:module";
-import { describe, test, expect } from "bun:test";
+import { describe, test, expect } from "vitest";
 import * as prettier from "prettier";
 import * as plugin from "../index.ts";
 
 /** Directory containing all fixture subdirectories. */
-const FIXTURES_DIR = path.join(import.meta.dir, "__fixtures__");
+const FIXTURES_DIR = path.join(import.meta.dirname!, "__fixtures__");
 
 /**
  * Format PDXScript source text using our Prettier plugin.
@@ -259,7 +259,12 @@ describe("disposeParser", () => {
  * They require `bun run build` to have been run first.
  */
 describe("CJS entry point", () => {
-  const distCjsPath = path.join(import.meta.dir, "..", "dist", "index.cjs");
+  const distCjsPath = path.join(
+    import.meta.dirname!,
+    "..",
+    "dist",
+    "index.cjs",
+  );
   // createRequire produces a require() function scoped to this module's URL.
   // This lets ESM test files load CJS modules portably (works in both Node.js and Bun).
   const cjsRequire = createRequire(import.meta.url);

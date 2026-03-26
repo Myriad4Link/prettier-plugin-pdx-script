@@ -273,15 +273,8 @@ function print(path: any, _options: any, print: (path: any) => Doc): Doc {
      * grammar-level abstraction to allow multiple types at a value position.
      */
     case "value": {
-      if (
-        node.children &&
-        node.children.length > 0 &&
-        node.children[0].type === "block"
-      ) {
-        const childDocs = path.map(print, "children") as Doc[];
-        return childDocs[0]!;
-      }
-      return node.text;
+      const childDocs = path.map(print, "children") as Doc[];
+      return childDocs[0]!;
     }
 
     // -----------------------------------------------------------------------

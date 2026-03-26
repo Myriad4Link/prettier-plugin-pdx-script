@@ -11,15 +11,31 @@ PDXScript is the scripting language used in Paradox Interactive games such as Vi
 
 This plugin provides automatic, consistent formatting for PDXScript files using Prettier. It uses a [tree-sitter](https://tree-sitter.github.io/tree-sitter/) WASM parser to reliably parse PDXScript, then applies opinionated formatting rules. The parser is compiled from [tree-sitter-pdx_script](https://github.com/Myriad4Link/tree-sitter-pdx_script), a tree-sitter grammar for Paradox script files.
 
-## Installation
+## Startup
+
+### 1. Install
 
 ```bash
 npm install --save-dev prettier-plugin-pdx-script
 ```
 
-Prettier will automatically discover the plugin. No additional configuration is needed.
+Prettier automatically discovers plugins from your project's dependencies. No explicit plugin registration is needed.
 
-## Usage
+### 2. Configure
+
+Create a `.prettierrc` (or `.prettierrc.json`) in your project root:
+
+```json
+{
+  "plugins": ["prettier-plugin-pdx-script"]
+}
+```
+
+If you don't need to change any formatting defaults, the empty config `{}` also works — Prettier will still auto-detect the plugin.
+
+### 3. Format
+
+Run Prettier against your `.txt` script files:
 
 ```bash
 # Format a single file
@@ -30,6 +46,49 @@ npx prettier --check path/to/file.txt
 
 # Format all .txt files in a directory
 npx prettier --write "path/to/scripts/**/*.txt"
+```
+
+That's it — your PDXScript files will be formatted with tab-based indentation, compact empty blocks, and consistent spacing.
+
+### 4. VS Code (optional)
+
+Install the [Prettier extension](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) and add to your `.vscode/settings.json`:
+
+```json
+{
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[plaintext]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
+}
+```
+
+This tells VS Code to use Prettier for `.txt` files.
+
+### 5. Bundling (optional)
+
+When bundling this plugin (e.g. in a VS Code extension or webpack/esbuild build), the default WASM loading may fail. Two WASM files need to be located:
+
+1. **tree-sitter runtime** — `tree-sitter.wasm`, loaded via the `locateFile` callback
+2. **grammar** — `tree-sitter-pdx_script.wasm`, loaded via `setGrammarBinary()`
+
+Override their resolution before any parse call:
+
+```ts
+import { setGrammarBinary, setLocateFile } from "prettier-plugin-pdx-script";
+
+// Supply the grammar WASM directly
+setGrammarBinary(() => myWasmBinary);
+
+// Tell tree-sitter where to find its runtime WASM
+setLocateFile((fileName, _scriptDir) => path.join(__dirname, "wasm", fileName));
+```
+
+The grammar WASM is also accessible via `require.resolve()`:
+
+```ts
+const wasmPath =
+  require.resolve("prettier-plugin-pdx-script/dist/tree-sitter/tree-sitter-pdx_script.wasm");
 ```
 
 ## Formatting Rules
@@ -103,29 +162,6 @@ Input Text
 
 3. **Operator preservation**: The `=`, `>`, and `<` operators in key-value pairs are preserved from the source. They are anonymous tokens in tree-sitter (not in `namedChildren`) and are found by iterating `node.children`.
 
-## CJS / ESM Dual Support
-
-This package ships both ESM and CJS entry points:
-
-```json
-{
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    },
-    "./dist/tree-sitter/tree-sitter-pdx_script.wasm": "./dist/tree-sitter/tree-sitter-pdx_script.wasm",
-    "./package.json": "./package.json"
-  }
-}
-```
-
-ESM consumers use `import`, CJS consumers use `require()` — no dynamic `await import()` needed.
-
-The grammar WASM is also accessible via `require.resolve("prettier-plugin-pdx-script/dist/tree-sitter/tree-sitter-pdx_script.wasm")` for use with `setGrammarBinary()`.
-
 ## API
 
 ### `setGrammarBinary(loader)`
@@ -163,43 +199,51 @@ setLocateFile((fileName, _scriptDir) => {
 
 Get the current `locateFile` callback. Useful for wrapping the default resolver or testing.
 
-### Bundling
+### `resetParser()`
 
-When bundling this plugin (e.g. in a VS Code extension or webpack/esbuild build), the default WASM loading may fail. There are two WASM files to account for:
-
-1. **tree-sitter runtime WASM** — `tree-sitter.wasm`, loaded by `web-tree-sitter`'s `Parser.init()` via `locateFile`
-2. **grammar WASM** — `tree-sitter-pdx_script.wasm`, loaded by our `setGrammarBinary()` callback
-
-If either fails to resolve, the plugin will throw at init time.
-
-#### Grammar WASM
-
-Call `setGrammarBinary()` to supply the grammar WASM directly:
+Clears the cached tree-sitter parser so the next `parse()` call re-initializes with the current `grammarBinaryLoader` and `locateFileFn` settings. Useful for test isolation (call in `beforeEach`) or recovering from a bad `setGrammarBinary()` call without reloading the module.
 
 ```ts
-import { setGrammarBinary } from "prettier-plugin-pdx-script";
-import wasmBinary from "./tree-sitter-pdx_script.wasm";
+import { resetParser } from "prettier-plugin-pdx-script";
 
-setGrammarBinary(() => wasmBinary);
+resetParser();
 ```
 
-#### Runtime WASM (locateFile)
+### `disposeParser()`
 
-Call `setLocateFile()` to override how `web-tree-sitter` locates its own runtime WASM:
+Same as `resetParser()` but also calls `parser.delete()` to release WASM resources. Use this for full cleanup when the parser is no longer needed.
 
 ```ts
-import { setLocateFile } from "prettier-plugin-pdx-script";
+import { disposeParser } from "prettier-plugin-pdx-script";
 
-setLocateFile((fileName, _scriptDir) => {
-  return path.join(__dirname, "wasm", fileName);
-});
+disposeParser();
 ```
 
-Both callbacks must be called before any `parse()` invocation.
+### `getGrammarWasmPath()`
+
+Resolves the grammar WASM file path relative to the module's directory. Works reliably across CJS/ESM and bundled/unbundled environments.
+
+```ts
+import { getGrammarWasmPath } from "prettier-plugin-pdx-script";
+
+const wasmPath = getGrammarWasmPath();
+```
+
+### `PARSER_NAME`
+
+The parser name string `"pdx-script-parse"`, exported as a named constant. Useful for referencing the parser in Prettier plugin configurations.
+
+```ts
+import { PARSER_NAME } from "prettier-plugin-pdx-script";
+
+console.log(PARSER_NAME); // "pdx-script-parse"
+```
 
 ### Parser Caching
 
 The tree-sitter parser is initialized once and cached for the lifetime of the module. `Parser.init()` and `Language.load()` are only called on the first `parse()` invocation; subsequent calls reuse the cached parser (~70ms saved per call).
+
+To clear the cache, call `resetParser()` (re-initializes on next parse) or `disposeParser()` (also releases WASM resources).
 
 ## File Structure
 
@@ -212,6 +256,10 @@ prettier-plugin-pdx-script/
 ├── README.md                 # This file
 ├── tree-sitter/
 │   └── tree-sitter-pdx_script.wasm   # Compiled tree-sitter WASM parser
+├── tests/
+│   ├── format.test.ts        # Fixture-based formatting tests
+│   └── __fixtures__/         # Test fixtures (input/expected pairs)
+│       └── MWD_decisions.txt # Large file regression fixture (OOM guard)
 └── dist/                     # Compiled output (generated by build)
     ├── index.js              # ESM entry point
     ├── index.cjs             # CJS entry point
@@ -223,11 +271,11 @@ prettier-plugin-pdx-script/
 
 ### Source Files
 
-| File             | Purpose                                                                                                                                                                                        |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `index.ts`       | Exports `languages`, `parsers`, `printers` for Prettier. Defines the parser with caching, configurable WASM loading (`setGrammarBinary`, `setLocateFile`), and ESM/CJS `__dirname` resolution. |
-| `printer.ts`     | Exports the `printers` object with a `print` function that walks the AST and produces formatted Prettier Doc output. Handles all PDXScript node types.                                         |
-| `tsup.config.ts` | Build configuration for tsup — produces dual CJS/ESM output with TypeScript declarations.                                                                                                      |
+| File             | Purpose                                                                                                                                                                                                                                                                                 |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`       | Exports `languages`, `parsers`, `printers`, `PARSER_NAME` for Prettier. Defines the parser with caching, configurable WASM loading (`setGrammarBinary`, `setLocateFile`, `getGrammarWasmPath`), ESM/CJS `__dirname` resolution, and lifecycle control (`resetParser`, `disposeParser`). |
+| `printer.ts`     | Exports the `printers` object with a `print` function that walks the AST and produces formatted Prettier Doc output. Handles all PDXScript node types.                                                                                                                                  |
+| `tsup.config.ts` | Build configuration for tsup — produces dual CJS/ESM output with TypeScript declarations.                                                                                                                                                                                               |
 
 ## PDXScript Language Reference
 

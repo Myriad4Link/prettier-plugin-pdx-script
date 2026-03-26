@@ -27,12 +27,13 @@ import * as path from "node:path";
 // createRequire lets us simulate CJS require() from this ESM test file.
 // Bare require() is not available in ESM under Node.js (only Bun polyfills it).
 import { createRequire } from "node:module";
-import { describe, test, expect } from "bun:test";
+import { describe, test, expect, vi } from "vitest";
 import * as prettier from "prettier";
 import * as plugin from "../index.ts";
+import type { GrammarBinaryLoader, LocateFileFn } from "../index.ts";
 
 /** Directory containing all fixture subdirectories. */
-const FIXTURES_DIR = path.join(import.meta.dir, "__fixtures__");
+const FIXTURES_DIR = path.join(import.meta.dirname!, "__fixtures__");
 
 /**
  * Format PDXScript source text using our Prettier plugin.
@@ -259,7 +260,12 @@ describe("disposeParser", () => {
  * They require `bun run build` to have been run first.
  */
 describe("CJS entry point", () => {
-  const distCjsPath = path.join(import.meta.dir, "..", "dist", "index.cjs");
+  const distCjsPath = path.join(
+    import.meta.dirname!,
+    "..",
+    "dist",
+    "index.cjs",
+  );
   // createRequire produces a require() function scoped to this module's URL.
   // This lets ESM test files load CJS modules portably (works in both Node.js and Bun).
   const cjsRequire = createRequire(import.meta.url);
@@ -328,5 +334,201 @@ describe("regression: issue #8 – convertTree() OOM on large files", () => {
     const result = await format(input);
     expect(typeof result).toBe("string");
     expect(result.length).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Parser isolation — beforeEach reset
+// ---------------------------------------------------------------------------
+
+describe("parser isolation", () => {
+  test("resetParser() clears parser state for test independence", () => {
+    plugin.resetParser();
+  });
+
+  test("resetParser() allows fresh initialization on next format", async () => {
+    plugin.resetParser();
+    const result = await format("isolated_decl = { key = value }");
+    expect(result).toContain("isolated_decl");
+    plugin.resetParser();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Error-path tests
+// ---------------------------------------------------------------------------
+
+describe("error paths", () => {
+  test("formats empty input without throwing", async () => {
+    const result = await format("");
+    expect(typeof result).toBe("string");
+  });
+
+  test("throws when GrammarBinaryLoader returns a non-Uint8Array", async () => {
+    plugin.resetParser();
+    plugin.setGrammarBinary(
+      (() => "not-a-uint8array") as unknown as GrammarBinaryLoader,
+    );
+    await expect(format("test = { a = b }")).rejects.toThrow(
+      "GrammarBinaryLoader must return a Uint8Array",
+    );
+    plugin.resetParser();
+  });
+
+  test("throws when GrammarBinaryLoader returns null", async () => {
+    plugin.resetParser();
+    plugin.setGrammarBinary((() => null) as unknown as GrammarBinaryLoader);
+    await expect(format("test = { a = b }")).rejects.toThrow(
+      "GrammarBinaryLoader must return a Uint8Array",
+    );
+    plugin.resetParser();
+  });
+
+  test("handles GrammarBinaryLoader returning a Promise<Uint8Array>", async () => {
+    plugin.resetParser();
+    const wasmBuffer = fs.readFileSync(plugin.getGrammarWasmPath());
+    plugin.setGrammarBinary(() => Promise.resolve(new Uint8Array(wasmBuffer)));
+    const result = await format("promise_decl = { key = value }");
+    expect(result).toContain("promise_decl");
+    plugin.resetParser();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cursor position tests — locStart / locEnd
+// ---------------------------------------------------------------------------
+
+describe("cursor position", () => {
+  test("preserves cursor position through formatting", async () => {
+    const input = "decl = { key = value }";
+    const result = await prettier.formatWithCursor(input, {
+      parser: "pdx-script-parse",
+      plugins: [plugin as any],
+      useTabs: true,
+      cursorOffset: 0,
+    });
+    expect(typeof result.formatted).toBe("string");
+    expect(result.cursorOffset).toBeTypeOf("number");
+    expect(result.cursorOffset).toBeGreaterThanOrEqual(0);
+  });
+
+  test("cursor offset is valid within formatted output", async () => {
+    const input = "decl = { key = value }";
+    const cursorPos = 8;
+    const result = await prettier.formatWithCursor(input, {
+      parser: "pdx-script-parse",
+      plugins: [plugin as any],
+      cursorOffset: cursorPos,
+      useTabs: true,
+    });
+    expect(result.cursorOffset).toBeLessThanOrEqual(result.formatted.length);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Plugin option tests
+// ---------------------------------------------------------------------------
+
+describe("plugin options", () => {
+  test("useTabs: false produces space-indented output", async () => {
+    const input = "decl = { key = value }";
+    const result = await prettier.format(input, {
+      parser: "pdx-script-parse",
+      plugins: [plugin as any],
+      useTabs: false,
+    });
+    expect(result).not.toContain("\t");
+    expect(result).toContain("  key = value");
+  });
+
+  test("useTabs: true produces tab-indented output", async () => {
+    const input = "decl = { key = value }";
+    const result = await prettier.format(input, {
+      parser: "pdx-script-parse",
+      plugins: [plugin as any],
+      useTabs: true,
+    });
+    expect(result).toContain("\tkey = value");
+  });
+
+  test("default option (no useTabs) produces space-indented output", async () => {
+    plugin.resetParser();
+    const input = "decl = { key = value }";
+    const result = await prettier.format(input, {
+      parser: "pdx-script-parse",
+      plugins: [plugin as any],
+    });
+    expect(result).toContain("  key = value");
+    plugin.resetParser();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// setGrammarBinary / setLocateFile warning branches
+// ---------------------------------------------------------------------------
+
+describe("configuration warning branches", () => {
+  test("setGrammarBinary() warns when called after parser initialization", async () => {
+    plugin.resetParser();
+    await format("warmup = { key = value }");
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    plugin.setGrammarBinary(() => new Uint8Array());
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "setGrammarBinary() called after parser initialization",
+      ),
+    );
+    warnSpy.mockRestore();
+    plugin.setGrammarBinary(() => fs.readFileSync(plugin.getGrammarWasmPath()));
+    plugin.resetParser();
+  });
+
+  test("setLocateFile() warns when called after parser initialization", async () => {
+    plugin.disposeParser();
+    await format("warmup2 = { key = value }");
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    plugin.setLocateFile(
+      (fileName: string, scriptDir: string) => `${scriptDir}/${fileName}`,
+    );
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "setLocateFile() called after parser initialization",
+      ),
+    );
+    warnSpy.mockRestore();
+    plugin.resetParser();
+  });
+
+  test("setGrammarBinary() does not warn when called before initialization", () => {
+    plugin.resetParser();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    plugin.setGrammarBinary(() => new Uint8Array());
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+    plugin.setGrammarBinary(() => fs.readFileSync(plugin.getGrammarWasmPath()));
+    plugin.resetParser();
+  });
+
+  test("setLocateFile() does not warn when called before initialization", () => {
+    plugin.resetParser();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    plugin.setLocateFile(
+      (fileName: string, scriptDir: string) => `${scriptDir}/${fileName}`,
+    );
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+    plugin.resetParser();
+  });
+
+  test("getLocateFile() returns the current locateFile function", () => {
+    const fn = plugin.getLocateFile();
+    expect(typeof fn).toBe("function");
+  });
+
+  test("getGrammarBinary() returns the current grammar binary loader", () => {
+    const loader = plugin.getGrammarBinary();
+    expect(typeof loader).toBe("function");
   });
 });

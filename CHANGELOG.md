@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Now uses a single pass: `children.map(convertTree)` + `converted.filter(n => n.isNamed)`
   for `namedChildren`. Identical output, ~1.6 MB heap for the same file. (closes #8)
 
+### Changed
+
+- **CI/publish workflow updates** — Updated to Node.js 24 runtime target:
+  - `actions/checkout` v4 → v6
+  - `actions/setup-node` v4 → v6
+  - `node-version` 20.x → 24.x in publish workflow
+
 ## [0.1.0-rc.5] - 2026-03-26
 
 ### Added
